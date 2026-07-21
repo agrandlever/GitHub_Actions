@@ -1,0 +1,37 @@
+# GitHubのActions画面に表示されるワークフロー名
+name: Hello World
+
+# このワークフローをいつ実行するか
+on:
+  # リポジトリへpushされたときに実行する
+  push:
+    # mainブランチへのpushだけを対象にする
+    branches:
+      - main
+
+# 実行するジョブを定義する
+jobs:
+  # greetはジョブを識別するための任意のID
+  greet:
+    # GitHubが用意するUbuntu環境で実行する
+    runs-on: ubuntu-latest
+
+    # ジョブ内で上から順番に実行する処理
+    steps:
+      # 1つ目のステップ
+      - name: Say Hello
+        # echoは文字列をログに表示するコマンド
+        run: echo "Hello, GitHub Actions!"
+
+      # 2つ目のステップ
+      - name: Show date
+        # dateは現在日時を表示するLinuxコマンド
+        run: date
+
+      # 3つ目のステップ
+      - name: Show runner information
+        # |を使うことで、複数行のコマンドを書ける
+        run: |
+          echo "OS: $(uname -s)"
+          echo "User: $(whoami)"
+          echo "Directory: $(pwd)"
