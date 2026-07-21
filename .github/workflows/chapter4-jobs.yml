@@ -78,4 +78,4 @@ jobs:
 
     steps:
       - name: Show deployment result
-        run: echo "Deploy result is ${{ needs.deploy.result }}"
+        run: echo "Deploy  result is ${{ needs.deploy.result }}"
