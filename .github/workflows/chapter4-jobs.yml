@@ -1,0 +1,81 @@
+name: Chapter 4 - Jobs and Runners
+
+# 手動実行、またはmainブランチへのpushで起動する
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+# このワークフローで必要な最低限の権限
+permissions:
+  contents: read
+
+jobs:
+  # 最初に実行されるジョブ
+  build:
+    name: 1. Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build application
+        run: |
+          echo "Building application..."
+          # 実行順序を画面で確認しやすくするため、3秒待機する
+          sleep 3
+          echo "Build completed."
+
+  # buildが成功した後に実行される
+  unit-test:
+    name: 2A. Unit Test
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run unit tests
+        run: |
+          echo "Running unit tests..."
+          sleep 3
+          echo "Unit tests passed."
+
+  # unit-testと同様にbuild後に実行される
+  # unit-testには依存していないため、unit-testと並列になる
+  integration-test:
+    name: 2B. Integration Test
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run integration tests
+        run: |
+          echo "Running integration tests..."
+          sleep 3
+          echo "Integration tests passed."
+
+  # 2種類のテストが両方成功した後に実行される
+  deploy:
+    name: 3. Deploy
+    needs:
+      - unit-test
+      - integration-test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy application
+        run: |
+          echo "Deploying application..."
+          sleep 3
+          echo "Deployment completed."
+
+  # deployが失敗またはスキップされても実行する
+  notify:
+    name: 4. Notify
+    needs: deploy
+    if: ${{ always() }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Show deployment result
+        run: echo "Deploy result is ${{ needs.deploy.result }}"
