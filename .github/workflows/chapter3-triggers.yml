@@ -1,0 +1,76 @@
+# Actions画面に表示されるワークフロー名
+name: Chapter 3 - Trigger Practice
+
+# どのイベントで実行されたかを一覧画面で確認しやすくする
+run-name: Trigger practice - ${{ github.event_name }} by @${{ github.actor }}
+
+# ワークフローを起動する条件
+on:
+  push:
+    # mainまたはrelease/～へのpushだけを対象にする
+    branches:
+      - main
+      - "release/**"
+
+    # ドキュメントだけの変更では実行しない
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+  pull_request:
+    # mainをマージ先とするPRを対象にする
+    branches:
+      - main
+
+    # PRの作成、更新、再オープン時に実行する
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+  schedule:
+    # 平日の日本時間9時に実行する
+    - cron: "0 9 * * 1-5"
+      timezone: "Asia/Tokyo"
+
+  workflow_dispatch:
+    # Actions画面から入力できる項目
+    inputs:
+      message:
+        description: "ログに表示するメッセージ"
+        required: false
+        type: string
+        default: "Manual execution"
+
+      debug_mode:
+        description: "デバッグ情報を表示する"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  show-trigger-information:
+    # GitHubが用意するLinux環境で実行する
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: イベント情報を表示
+        # githubコンテキストから実行理由を取得する
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Event action: ${{ github.event.action }}"
+          echo "Branch or ref: ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit SHA: ${{ github.sha }}"
+
+      - name: 手動入力を表示
+        # workflow_dispatchで起動した場合だけ実行する
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo "Message: ${{ inputs.message }}"
+          echo "Debug mode: ${{ inputs.debug_mode }}"
+
+      - name: デバッグ用ステップ
+        # 手動実行かつdebug_modeがtrueの場合だけ実行する
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_mode }}
+        run: echo "Debug mode is enabled."
