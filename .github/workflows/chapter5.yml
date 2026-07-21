@@ -1,0 +1,66 @@
+name: Chapter 5 - Steps and Actions
+
+# mainへのpush、またはActions画面からの手動実行で起動する
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# ソースコードを読み取るための最小限の権限
+permissions:
+  contents: read
+
+jobs:
+  learn-steps:
+    # 自分のWindows PCではなく、GitHub上のUbuntuで実行する
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. リポジトリのソースコードをランナーへ取得する
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # 2. 教材に合わせてNode.js 20を準備する
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      # 3. runで複数のコマンドを実行する
+      - name: Show tool versions
+        run: |
+          node --version
+          npm --version
+
+      # 4. GITHUB_OUTPUTへ値を書き込む
+      - name: Create step output
+        id: runtime
+        run: |
+          NODE_VERSION=$(node --version)
+          echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+
+      # 5. 前のステップの出力値を使用する
+      - name: Use step output
+        env:
+          # 式の結果を安全に環境変数へ渡す
+          DETECTED_NODE_VERSION: ${{ steps.runtime.outputs.node_version }}
+        run: echo "Detected Node.js version is $DETECTED_NODE_VERSION"
+
+      # 6. 後続ステップ用の環境変数を登録する
+      - name: Set environment variable
+        run: echo "COURSE_CHAPTER=5" >> "$GITHUB_ENV"
+
+      # 7. 前のステップで設定した環境変数を使用する
+      - name: Use environment variable
+        run: echo "Current chapter is $COURSE_CHAPTER"
+
+      # 8. mainブランチの場合だけ実行する
+      - name: Run only on main
+        if: github.ref == 'refs/heads/main'
+        run: echo "This step is running on the main branch."
+
+      # 9. それまでの成功・失敗にかかわらず状態を表示する
+      - name: Show final status
+        if: always()
+        run: echo "Job status is ${{ job.status }}"
