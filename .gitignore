@@ -1,1 +1,11 @@
+# npmでインストールした外部パッケージ
+node_modules/
+
+# Jestが生成するレポート
+coverage/
+
+# ビルドで生成する成果物
+dist/
+
+# VS Codeなどが作る履歴
 .history/

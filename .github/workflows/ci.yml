@@ -1,0 +1,150 @@
+# GitHubのActions画面に表示されるワークフロー名
+name: Chapter 8 CI
+
+# ワークフローを起動するタイミング
+on:
+  # mainブランチへpushされたときに実行する
+  push:
+    branches:
+      - main
+
+  # mainブランチ向けのPull Requestで実行する
+  pull_request:
+    branches:
+      - main
+
+  # Actions画面から手動でも実行できるようにする
+  workflow_dispatch:
+
+# CIではリポジトリの読み取りだけを許可する
+# 不要な書き込み権限を与えないための設定
+permissions:
+  contents: read
+
+# 同じブランチで新しい実行が始まった場合、
+# 古い実行を中止して実行時間を節約する
+concurrency:
+  group: chapter8-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --------------------------------
+  # 1. コード品質を確認するジョブ
+  # --------------------------------
+  lint:
+    # Pull Requestに表示されるチェック名
+    name: Lint and Format
+
+    # GitHubが用意するUbuntu環境で実行する
+    runs-on: ubuntu-latest
+
+    steps:
+      # GitHub上のリポジトリをランナーへ取得する
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # Node.jsをランナーへ準備する
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          # 演習で使用するNode.jsのバージョン
+          node-version: "24"
+
+          # npmのダウンロードキャッシュを利用する
+          cache: npm
+
+      # package-lock.jsonどおりに依存関係を再現する
+      - name: Install dependencies
+        run: npm ci
+
+      # JavaScriptの問題を検査する
+      - name: Run ESLint
+        run: npm run lint
+
+      # ファイルの書式が統一されているか確認する
+      - name: Check formatting
+        run: npm run format:check
+
+  # --------------------------------
+  # 2. 自動テストを実行するジョブ
+  # --------------------------------
+  test:
+    name: Unit Tests
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Jestでテストとカバレッジ計測を行う
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      # テスト失敗時にも、生成できたレポートを保存する
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          # Actions画面に表示される名前
+          name: coverage-report
+
+          # 保存するフォルダ
+          path: coverage/
+
+          # レポートがなければ警告にする
+          if-no-files-found: warn
+
+          # 学習用として7日間保存する
+          retention-days: 7
+
+  # --------------------------------
+  # 3. 成果物を作成するジョブ
+  # --------------------------------
+  build:
+    name: Build
+
+    runs-on: ubuntu-latest
+
+    # lintとtestの両方が成功した後だけ実行する
+    needs:
+      - lint
+      - test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # srcフォルダからdistフォルダを作成する
+      - name: Build application
+        run: npm run build
+
+      # distフォルダを成果物として保存する
+      - name: Upload build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-output
+          path: dist/
+
+          # distが作られなかった場合はジョブを失敗させる
+          if-no-files-found: error
+
+          retention-days: 7
