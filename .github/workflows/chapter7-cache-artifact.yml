@@ -1,72 +1,108 @@
 name: Chapter 7 Cache and Artifact
 
-# mainブランチへのpush、またはGitHub画面からの手動実行で起動する
+# GitHubのActions画面から手動実行する
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  build:
-    # GitHubが用意したLinux環境で実行する
+  create-artifact:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ソースコードを取得
-        # リポジトリの内容をランナーへ取得する
-        uses: actions/checkout@v7
-
-      - name: Node.jsを準備
-        # Node.jsをインストールし、npmキャッシュも復元する
-        uses: actions/setup-node@v7
+      - name: 練習用キャッシュを復元
+        id: demo-cache
+        uses: actions/cache@v6
         with:
-          node-version: "24"
+          # このフォルダを次回の実行でも再利用する
+          path: .chapter7-cache
 
-          # npmがダウンロードしたパッケージをキャッシュする
-          cache: "npm"
+          # 同じOS・同じキーなら、前回のキャッシュが復元される
+          key: chapter7-demo-${{ runner.os }}-v1
 
-          # このファイルの内容をキャッシュキーの判定に利用する
-          cache-dependency-path: package-lock.json
+      - name: キャッシュがない場合だけファイルを作成
+        # 初回実行ではキャッシュがないため、このステップが動く
+        # 2回目以降に完全一致すれば、このステップはスキップされる
+        if: steps.demo-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p .chapter7-cache
 
-      - name: 依存関係をインストール
-        # package-lock.jsonに記録された内容を正確にインストールする
-        run: npm ci
+          echo "このファイルはキャッシュの初回作成時に生成されました。" \
+            > .chapter7-cache/cache.txt
 
-      - name: テストを実行
-        # package.jsonにtestスクリプトが必要
-        run: npm test
+          echo "created-at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+            >> .chapter7-cache/cache.txt
 
-      - name: アプリケーションをビルド
-        # package.jsonにbuildスクリプトが必要
-        run: npm run build
+      - name: キャッシュ結果をtrueまたはfalseに整える
+        id: cache-status
+        shell: bash
+        run: |
+          # キャッシュミス時の出力は空文字になるため、
+          # 分かりやすいfalseに変換する
+          if [ "${{ steps.demo-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: ビルド成果物をアップロード
-        # 次のジョブで使うため、distフォルダをGitHub側に保存する
-        uses: actions/upload-artifact@v6
+      - name: キャッシュ内容を確認
+        shell: bash
+        run: |
+          echo "cache-hit=${{ steps.cache-status.outputs.value }}"
+          echo "キャッシュに入っているファイル:"
+          cat .chapter7-cache/cache.txt
+
+      - name: アーティファクト用ファイルを作成
+        shell: bash
+        run: |
+          # アーティファクトとして保存するフォルダを作る
+          mkdir -p output
+
+          echo "run-number=${{ github.run_number }}" \
+            > output/result.txt
+
+          echo "cache-hit=${{ steps.cache-status.outputs.value }}" \
+            >> output/result.txt
+
+          echo "--- キャッシュの内容 ---" \
+            >> output/result.txt
+
+          cat .chapter7-cache/cache.txt \
+            >> output/result.txt
+
+      - name: 結果をアーティファクトとしてアップロード
+        uses: actions/upload-artifact@v7
         with:
-          name: webapp-build
-          path: dist/
-          retention-days: 7
+          # GitHubの実行画面に表示される名前
+          name: chapter7-result
+
+          # 保存するフォルダ
+          path: output/
+
+          # ファイルがなければエラーにする
           if-no-files-found: error
 
   verify-artifact:
-    # buildジョブが正常終了してから実行する
-    needs: build
+    # create-artifactが成功した後で実行する
+    needs: create-artifact
 
     runs-on: ubuntu-latest
 
     steps:
-      - name: ビルド成果物をダウンロード
-        # buildジョブが保存したアーティファクトを取得する
-        uses: actions/download-artifact@v7
+      - name: アーティファクトをダウンロード
+        uses: actions/download-artifact@v8
         with:
-          name: webapp-build
-          path: downloaded-dist/
+          # アップロード時と同じ名前を指定する
+          name: chapter7-result
 
-      - name: ダウンロードしたファイルを確認
-        # このrunはWindowsではなく、ubuntu-latest上のBashで実行される
+          # このジョブ内で展開する場所
+          path: downloaded/
+
+      - name: ダウンロードした内容を確認
         shell: bash
         run: |
           echo "ダウンロードしたファイル:"
-          find downloaded-dist -maxdepth 3 -type f -print
+          find downloaded -type f -print
+
+          echo "result.txtの内容:"
+          cat downloaded/result.txt
