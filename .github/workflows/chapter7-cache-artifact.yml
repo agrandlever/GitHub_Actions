@@ -1,0 +1,72 @@
+name: Chapter 7 Cache and Artifact
+
+# mainブランチへのpush、またはGitHub画面からの手動実行で起動する
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    # GitHubが用意したLinux環境で実行する
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ソースコードを取得
+        # リポジトリの内容をランナーへ取得する
+        uses: actions/checkout@v7
+
+      - name: Node.jsを準備
+        # Node.jsをインストールし、npmキャッシュも復元する
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+          # npmがダウンロードしたパッケージをキャッシュする
+          cache: "npm"
+
+          # このファイルの内容をキャッシュキーの判定に利用する
+          cache-dependency-path: package-lock.json
+
+      - name: 依存関係をインストール
+        # package-lock.jsonに記録された内容を正確にインストールする
+        run: npm ci
+
+      - name: テストを実行
+        # package.jsonにtestスクリプトが必要
+        run: npm test
+
+      - name: アプリケーションをビルド
+        # package.jsonにbuildスクリプトが必要
+        run: npm run build
+
+      - name: ビルド成果物をアップロード
+        # 次のジョブで使うため、distフォルダをGitHub側に保存する
+        uses: actions/upload-artifact@v6
+        with:
+          name: webapp-build
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  verify-artifact:
+    # buildジョブが正常終了してから実行する
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ビルド成果物をダウンロード
+        # buildジョブが保存したアーティファクトを取得する
+        uses: actions/download-artifact@v7
+        with:
+          name: webapp-build
+          path: downloaded-dist/
+
+      - name: ダウンロードしたファイルを確認
+        # このrunはWindowsではなく、ubuntu-latest上のBashで実行される
+        shell: bash
+        run: |
+          echo "ダウンロードしたファイル:"
+          find downloaded-dist -maxdepth 3 -type f -print
