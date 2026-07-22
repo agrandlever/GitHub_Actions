@@ -1,0 +1,33 @@
+{
+  "name": "github_actions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --ci",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test:coverage": "jest --ci --coverage",
+    "format": "prettier --write .",
+    "build": "node scripts/build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agrandlever/GitHub_Actions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/agrandlever/GitHub_Actions/issues"
+  },
+  "homepage": "https://github.com/agrandlever/GitHub_Actions#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "jest": "^30.4.2",
+    "prettier": "^3.9.6"
+  }
+}

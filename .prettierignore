@@ -1,0 +1,17 @@
+# npmでインストールされた外部パッケージ
+node_modules/
+
+# Jestが自動生成するカバレッジレポート
+coverage/
+
+# ビルドで自動生成するファイル
+dist/
+
+# VS Code拡張機能などが作る履歴
+.history/
+
+# 過去の章のワークフロー
+.github/workflows/old/
+
+# npmが自動生成するロックファイル
+package-lock.json
