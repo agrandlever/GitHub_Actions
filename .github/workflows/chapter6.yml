@@ -1,0 +1,78 @@
+name: Chapter 6 Environment Demo
+
+on:
+  # Actions画面から手動実行できるようにする
+  workflow_dispatch:
+
+  # mainブランチへpushした場合にも実行する
+  push:
+    branches:
+      - main
+
+# GITHUB_TOKENには読み取り権限だけを与える
+permissions:
+  contents: read
+
+# ワークフロー全体で使用できる環境変数
+env:
+  APP_NAME: github-actions-study
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+
+    # inspectジョブ内で使用できる環境変数
+    env:
+      BUILD_MODE: training
+
+      # GitHubのVariableから値を取得する
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+
+      # GitHubのSecretから値を取得する
+      # 値そのものはログへ表示しない
+      DEMO_API_KEY: ${{ secrets.DEMO_API_KEY }}
+
+    steps:
+      - name: 環境変数のスコープを確認
+        # このステップだけで使用できる環境変数
+        env:
+          MESSAGE: Hello from step environment
+        run: |
+          echo "Application: $APP_NAME"
+          echo "Build mode: $BUILD_MODE"
+          echo "Message: $MESSAGE"
+
+      - name: デフォルト環境変数を確認
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Actor: $GITHUB_ACTOR"
+          echo "Run number: $GITHUB_RUN_NUMBER"
+
+      - name: 短いコミットSHAを作成
+        run: |
+          # コミットSHAの先頭7文字を取り出す
+          SHORT_SHA="${GITHUB_SHA::7}"
+
+          # 後続ステップで使えるようにGITHUB_ENVへ書き込む
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+
+      - name: 短いコミットSHAを使用
+        run: |
+          echo "Image tag: $APP_NAME:$SHORT_SHA"
+
+      - name: Variableを確認
+        run: |
+          # 未設定の場合はnot-setと表示する
+          echo "Deploy target: ${DEPLOY_TARGET:-not-set}"
+
+      - name: Secretが設定されている場合
+        if: ${{ env.DEMO_API_KEY != '' }}
+        run: |
+          # シークレットの値そのものは表示しない
+          echo "DEMO_API_KEY is configured."
+
+      - name: Secretが設定されていない場合
+        if: ${{ env.DEMO_API_KEY == '' }}
+        run: |
+          echo "DEMO_API_KEY is not configured."
