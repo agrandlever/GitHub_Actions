@@ -1,0 +1,23 @@
+# Dependabot設定ファイルの構文バージョン
+version: 2
+
+updates:
+  # package.jsonとpackage-lock.jsonの更新を確認する
+  - package-ecosystem: "npm"
+
+    # package.jsonがリポジトリ直下にあるため「/」を指定する
+    directory: "/"
+
+    # 週に1回、新しいバージョンがないか確認する
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actionsで利用する外部Actionを確認する
+  - package-ecosystem: "github-actions"
+
+    # .github/workflowsを調べる場合も「/」を指定する
+    directory: "/"
+
+    # 週に1回、Actionの更新を確認する
+    schedule:
+      interval: "weekly"
