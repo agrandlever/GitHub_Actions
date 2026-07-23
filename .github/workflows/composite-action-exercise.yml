@@ -9,7 +9,7 @@ on:
     branches:
       - main
 
-# ワークフロー全体では権限を与えない
+# ワークフロー全体では、GITHUB_TOKENの権限をいったん無効にする
 permissions: {}
 
 jobs:
@@ -23,22 +23,21 @@ jobs:
 
     steps:
       - name: Check out repository
-        # リポジトリ内のローカルActionを使うため、
-        # 先にファイルをランナーへ取得する必要がある
+        # ローカルのComposite Actionを利用するため、
+        # リポジトリのファイルをランナーへ取得する
         uses: actions/checkout@v6
 
       - name: Run lint-and-test action
-        # 後続ステップから出力を参照するためのid
+        # 後続ステップから出力を参照するための識別名
         id: quality-check
 
-        # 同じリポジトリ内のComposite Actionを相対パスで呼ぶ
+        # 同じリポジトリ内のComposite Actionを呼び出す
         uses: ./.github/actions/lint-and-test
 
         with:
           node-version: "20"
 
-          # Vitestが待機状態になる場合は
-          # npm test -- --run に変更する
+          # package.jsonに定義されたJestのテストを実行する
           test-command: "npm test"
 
       - name: Show test result
@@ -47,10 +46,10 @@ jobs:
 
         shell: bash
 
-        # Composite Actionが返した結果を環境変数へ入れる
+        # Composite Actionが返した出力を環境変数へ入れる
         env:
           TEST_STATUS: ${{ steps.quality-check.outputs.test-status }}
 
-        # |を使うことで、後ろをシェルコマンドとして安全に記述する
+        # 複数行文字列にして、コロンを含むコマンドを安全に記述する
         run: |
           echo "Test status: $TEST_STATUS"
