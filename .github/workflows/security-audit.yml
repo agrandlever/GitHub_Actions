@@ -1,0 +1,62 @@
+name: Security Audit Exercise
+
+on:
+  # Actions画面から安全に動作確認する
+  workflow_dispatch:
+
+  # main向けPull Requestの内容を確認する
+  pull_request:
+    branches:
+      - main
+
+# ワークフロー全体では、すべての権限を無効にする
+permissions: {}
+
+jobs:
+  safe-check:
+    name: Safe Pull Request Check
+    runs-on: ubuntu-latest
+
+    # このジョブにはリポジトリの読み取り権限だけを与える
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        # Actionを完全長のコミットSHAで固定する
+        # このSHAはactions/checkout v6.0.2に対応する
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+        with:
+          # 後続処理でgit pushをしないため、
+          # 認証情報を作業環境へ残さない
+          persist-credentials: false
+
+      - name: Show pull request information safely
+        # Pull Requestから実行された場合だけ動かす
+        if: github.event_name == 'pull_request'
+
+        # 信頼できない入力値をrunへ直接書かず、
+        # 一度環境変数へ格納する
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+
+        shell: bash
+
+        run: |
+          # %sの部分に、文字列としてタイトルを出力する
+          printf 'Title: %s\n' "$PR_TITLE"
+
+          # 本文もシェルコードではなく、文字列として出力する
+          printf 'Body:\n%s\n' "$PR_BODY"
+
+      - name: Show manual run message
+        # 手動実行時にはPull Request情報が存在しないため、
+        # 代わりに確認用メッセージを表示する
+        if: github.event_name == 'workflow_dispatch'
+
+        shell: bash
+
+        run: |
+          echo "Security audit workflow ran safely."
