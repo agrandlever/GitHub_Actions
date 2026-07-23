@@ -25,7 +25,7 @@ jobs:
       - name: Check out repository
         # Actionを完全長のコミットSHAで固定する
         # このSHAはactions/checkout v6.0.2に対応する
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
         with:
           # 後続処理でgit pushをしないため、
