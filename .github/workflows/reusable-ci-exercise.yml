@@ -1,0 +1,57 @@
+# Actions画面に表示するワークフロー名
+name: Reusable Workflow Exercise
+
+on:
+  # Actions画面から手動実行できるようにする
+  workflow_dispatch:
+
+  # main向けPull Requestでも実行する
+  pull_request:
+    branches:
+      - main
+
+# ワークフロー全体では権限を与えない
+permissions: {}
+
+jobs:
+  call_reusable_ci:
+    name: Call Reusable CI
+
+    # 呼び出されるReusable Workflowに渡す権限
+    permissions:
+      contents: read
+
+    # 同じリポジトリ内のReusable Workflowを呼び出す
+    # stepsの中ではなく、ジョブの直下にusesを書く
+    uses: ./.github/workflows/reusable-ci.yml
+
+    with:
+      # reusable-ci.ymlのworkflow_call.inputsへ渡す
+      node-version: "20"
+
+  show_result:
+    name: Show Result
+
+    # Reusable Workflowの完了後に実行する
+    needs: call_reusable_ci
+
+    # Lintやテストが失敗した場合でも、
+    # 結果表示ジョブは実行する
+    if: always()
+
+    runs-on: ubuntu-latest
+
+    # 結果表示にはGitHubへのアクセス権限が不要
+    permissions: {}
+
+    steps:
+      - name: Show reusable workflow result
+        # Reusable Workflowの出力を環境変数へ入れる
+        env:
+          TEST_STATUS: ${{ needs.call_reusable_ci.outputs.test_status }}
+
+        shell: bash
+
+        # コロンを含むため複数行形式で記述する
+        run: |
+          echo "Reusable workflow test status: $TEST_STATUS"

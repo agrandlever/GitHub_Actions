@@ -1,0 +1,59 @@
+# 再利用可能ワークフロー自体の名前
+name: Reusable CI
+
+on:
+  # 他のワークフローから呼び出せるようにする
+  workflow_call:
+    inputs:
+      node-version:
+        # 呼び出し元からNode.jsのバージョンを受け取る
+        description: Node.js version
+
+        # 省略した場合はNode.js 20を使用する
+        required: false
+        type: string
+        default: "20"
+
+    outputs:
+      test_status:
+        # 呼び出し元へ返す値
+        description: Result of the test step
+
+        # quality_checkジョブの出力を
+        # Reusable Workflow全体の出力として公開する
+        value: ${{ jobs.quality_check.outputs.test_status }}
+
+# ワークフロー全体では権限を与えない
+permissions: {}
+
+jobs:
+  quality_check:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    # このジョブで必要な読み取り権限だけを与える
+    permissions:
+      contents: read
+
+    outputs:
+      # Composite Actionの出力をジョブの出力へ変換する
+      test_status: ${{ steps.run_quality_check.outputs['test-status'] }}
+
+    steps:
+      - name: Check out repository
+        # 呼び出し元リポジトリのファイルを取得する
+        uses: actions/checkout@v6
+
+      - name: Run lint-and-test composite action
+        # 出力値を参照するための識別名
+        id: run_quality_check
+
+        # 演習1で作成したComposite Actionを呼び出す
+        uses: ./.github/actions/lint-and-test
+
+        with:
+          # workflow_callで受け取った値を渡す
+          node-version: ${{ inputs.node-version }}
+
+          # package.jsonのJestテストを実行する
+          test-command: "npm test"
