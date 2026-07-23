@@ -42,7 +42,10 @@ jobs:
     steps:
       - name: Check out repository
         # 呼び出し元リポジトリのファイルを取得する
-        uses: actions/checkout@v6
+        #uses: actions/checkout@v6
+        # 完全なコミットSHAでv6.0.2へ固定する
+        # コメントはDependabotがバージョンを判断するためにも役立つ
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Run lint-and-test composite action
         # 出力値を参照するための識別名
