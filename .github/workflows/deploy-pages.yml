@@ -1,0 +1,90 @@
+# GitHubのActions画面に表示されるワークフロー名
+name: Deploy to GitHub Pages
+
+# mainブランチに変更が入ったときだけ起動する
+# Pull Requestをmainへマージした場合も、mainへのpushとして扱われる
+on:
+  push:
+    branches:
+      - main
+
+# 同じ公開処理が重ならないように制御する
+concurrency:
+  group: github-pages
+  # 実行中の本番デプロイを途中で止めない
+  cancel-in-progress: false
+
+# ワークフロー全体では、ソースコードの読み取りだけを許可する
+permissions:
+  contents: read
+
+jobs:
+  # テストと本番用ファイルの作成を担当するジョブ
+  build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # リポジトリのソースコードをランナーへ取得する
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Node.js 20を使用できる状態にする
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          # npmの依存関係キャッシュを利用して処理を高速化する
+          cache: npm
+
+      # package-lock.jsonに従って依存パッケージを再現する
+      - name: Install dependencies
+        run: npm ci
+
+      # コードの書き方に問題がないか確認する
+      - name: Run lint
+        run: npm run lint
+
+      # プログラムの動作を自動テストする
+      - name: Run tests
+        run: npm test
+
+      # Viteを使ってGitHub Pages用のファイルをdistへ生成する
+      # リポジトリ名をURLの先頭に付けるため、--baseを指定する
+      - name: Build application
+        run: npm run build -- --base="/${{ github.event.repository.name }}/"
+
+      # GitHub Pages用の設定情報を準備する
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # distフォルダーをPages用アーティファクトとして保存する
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  # buildジョブが作った成果物を実際に公開するジョブ
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    # buildが成功した場合だけ実行する
+    needs: build
+
+    # Pagesへの書き込みとOIDCトークンの取得を、このジョブだけに許可する
+    permissions:
+      pages: write
+      id-token: write
+
+    # GitHub Pages専用のEnvironmentを使用する
+    environment:
+      name: github-pages
+      # デプロイ後のURLをGitHub画面に表示する
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # buildジョブがアップロードした成果物をGitHub Pagesへ公開する
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
