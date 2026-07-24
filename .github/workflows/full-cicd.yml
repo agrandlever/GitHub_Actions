@@ -96,3 +96,110 @@ jobs:
           # ログでビルド成果物を確認できるようにする
           echo "Build output:"
           find dist -type f -print
+
+      - name: Upload build artifact
+        # 外部Actionを安全に利用するため、v7.0.1の完全長SHAへ固定する
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+
+        with:
+          # 後のデプロイジョブが、この名前を指定してダウンロードする
+          name: dist-build
+
+          # npm run buildで生成されたフォルダーを保存する
+          path: dist/
+
+          # dist内にファイルがなければ、警告ではなくジョブを失敗させる
+          if-no-files-found: error
+
+          # 学習用の成果物なので、GitHub Actions上には7日間保存する
+          retention-days: 7
+
+  # ============================================
+  # Stage 3：GitHub Pagesへのデプロイ
+  # ============================================
+  deploy:
+    name: Deploy to GitHub Pages
+
+    # buildジョブが成功してから、このジョブを開始する
+    needs: build
+
+    # Pull Requestや手動実行では公開せず、
+    # mainブランチへのpush時だけデプロイする
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # buildジョブとは別の新しいランナーで実行される
+    runs-on: ubuntu-latest
+
+    # GitHub Pagesへの公開に必要な権限だけを与える
+    permissions:
+      # GitHub Pagesへデプロイ情報を書き込む
+      pages: write
+
+      # デプロイ元のブランチなどを証明するOIDCトークンを発行する
+      id-token: write
+
+    # GitHub Pages専用Environmentへデプロイする
+    environment:
+      name: github-pages
+
+      # deploy-pagesが返した公開URLをActions画面へ表示する
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # 複数のPagesデプロイが同時に実行されることを防ぐ
+    concurrency:
+      group: github-pages
+
+      # 実行中の本番デプロイは途中でキャンセルしない
+      cancel-in-progress: false
+
+    steps:
+      - name: Download build artifact
+        # buildジョブで保存したdist-buildを取得する
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+
+        with:
+          # upload-artifactで付けた名前と一致させる
+          name: dist-build
+
+          # ダウンロードしたファイルをdistフォルダーへ展開する
+          path: dist/
+
+      - name: Verify downloaded artifact
+        shell: bash
+
+        run: |
+          # ダウンロード先のdistフォルダーが存在するか確認する
+          test -d dist
+
+          # dist内にファイルが1個以上存在するか確認する
+          test -n "$(find dist -type f -print -quit)"
+
+          # デプロイ対象をActionsのログへ表示する
+          echo "Deployment files:"
+          find dist -type f -print
+
+      - name: Configure GitHub Pages
+        # GitHub Pagesの設定とデプロイ用情報を準備する
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload GitHub Pages artifact
+        # distをPages専用形式へ変換してアップロードする
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+
+        with:
+          # deploy-pagesが参照するPages専用Artifact名
+          name: github-pages
+
+          # 公開対象となる静的ファイル
+          path: dist/
+
+      - name: Deploy to GitHub Pages
+        # environment.urlから参照するため、ステップIDを付ける
+        id: deployment
+
+        # github-pages Artifactを実際のWebサイトとして公開する
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+        with:
+          # upload-pages-artifactで付けた名前を指定する
+          artifact_name: github-pages
