@@ -96,3 +96,20 @@ jobs:
           # ログでビルド成果物を確認できるようにする
           echo "Build output:"
           find dist -type f -print
+
+      - name: Upload build artifact
+        # 外部Actionを安全に利用するため、v7.0.1の完全長SHAへ固定する
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+
+        with:
+          # 後のデプロイジョブが、この名前を指定してダウンロードする
+          name: dist-build
+
+          # npm run buildで生成されたフォルダーを保存する
+          path: dist/
+
+          # dist内にファイルがなければ、警告ではなくジョブを失敗させる
+          if-no-files-found: error
+
+          # 学習用の成果物なので、GitHub Actions上には7日間保存する
+          retention-days: 7
