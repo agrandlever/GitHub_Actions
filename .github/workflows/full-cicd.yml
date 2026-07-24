@@ -93,6 +93,9 @@ jobs:
           # dist内にファイルが1個以上あるか確認する
           test -n "$(find dist -type f -print -quit)"
 
+          # GitHub Pagesのトップページが存在するか確認する
+          test -f dist/index.html
+
           # ログでビルド成果物を確認できるようにする
           echo "Build output:"
           find dist -type f -print
@@ -173,6 +176,9 @@ jobs:
 
           # dist内にファイルが1個以上存在するか確認する
           test -n "$(find dist -type f -print -quit)"
+
+          # GitHub Pagesのトップページが存在するか確認する
+          test -f dist/index.html
 
           # デプロイ対象をActionsのログへ表示する
           echo "Deployment files:"
