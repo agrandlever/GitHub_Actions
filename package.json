@@ -25,7 +25,7 @@
   "homepage": "https://github.com/agrandlever/GitHub_Actions#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.7.0",
+    "eslint": "^10.9.1",
     "globals": "^17.7.0",
     "jest": "^30.4.2",
     "prettier": "^3.9.6"
